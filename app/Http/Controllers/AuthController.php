@@ -12,7 +12,7 @@ class AuthController extends Controller
     {
         $credentials = $request->only(['email', 'password']);
 
-        if (! $token = Auth::attempt($credentials)) {
+        if (! $token = Auth::guard('api')->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -22,28 +22,30 @@ class AuthController extends Controller
     // get user
     public function me()
     {
-        return response()->json(Auth::user());
+        return response()->json(Auth::guard('api')->user());
     }
 
     // logout
     public function logout()
     {
-        Auth::logout();
+        Auth::guard('api')->logout();
         return response()->json(['message' => 'Logged out']);
     }
 
     // refresh token
-    public function refresh()
-    {
-        return $this->respondWithToken(Auth::refresh());
-    }
+    // public function refresh()
+    // {
+    //     return $this->respondWithToken(Auth::guard('api')->refresh());
+    // }
 
     protected function respondWithToken($token)
     {
+        $ttl = config('jwt.ttl'); // minutes
+
         return response()->json([
             'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => Auth::factory()->getTTL() * 60
+            'token_type'   => 'bearer',
+            'expires_in'   => $ttl * 60 // seconds
         ]);
     }
 }
