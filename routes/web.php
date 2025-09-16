@@ -6,6 +6,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/email/verify', function () {
+    return view('auth.verify-email');
+})->middleware('auth')->name('verification.notice');
+
 Route::fallback(function () {
     return view('welcome');
 });

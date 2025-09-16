@@ -2,11 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Auth\Events\Registered;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Illuminate\Validation\Rules;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Routing\Controller;
 
 class AuthController extends Controller
 {
+
     // login
     public function login(Request $request)
     {
@@ -33,10 +40,37 @@ class AuthController extends Controller
     }
 
     // refresh token
-    // public function refresh()
-    // {
-    //     return $this->respondWithToken(Auth::guard('api')->refresh());
-    // }
+    public function refresh()
+    {
+        return $this->respondWithToken(JWTAuth::refresh());
+    }
+
+    // register
+    public function register(Request $request)
+    {
+        // 1. Validasi request
+        $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ]);
+
+        // 2. Buat user baru
+        $user = User::create([
+            'name'     => $request->name,
+            'email'    => strtolower($request->email),
+            'password' => Hash::make($request->password),
+        ]);
+
+
+        // 3. Langsung generate token untuk user yang baru dibuat
+        //    Tidak perlu menggunakan Auth::attempt() lagi karena user sudah terverifikasi
+        $token = Auth::guard('api')->login($user);
+        event(new Registered($user));
+
+        // 4. Kembalikan respons dengan token
+        return $this->respondWithToken($token);
+    }
 
     protected function respondWithToken($token)
     {
